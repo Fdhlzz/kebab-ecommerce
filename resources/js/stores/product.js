@@ -1,7 +1,7 @@
 import api from '@/utils/api'
 import { defineStore } from 'pinia'
 
-export const useProductStore = defineStore('product', {
+export const useProductStore = defineStore('products', {
   state: () => ({
     products: [],
     loading: false,
@@ -35,17 +35,22 @@ export const useProductStore = defineStore('product', {
       try {
         const formData = new FormData()
 
-        formData.append('category_id', payload.category_id)
+        // 🔴 FIX 1: Use 'payload', not 'form'
+        // 🔴 FIX 2: Use 'payload.categoryId' (Vue) -> 'category_id' (Laravel)
+        formData.append('category_id', payload.categoryId) 
         formData.append('name', payload.name)
         formData.append('description', payload.description || '')
         formData.append('price', payload.price)
         formData.append('stock', payload.stock)
-        formData.append('is_active', payload.is_active ? 1 : 0)
+        
+        // 🔴 FIX 3: Use 'payload.isActive', not 'is_active'
+        formData.append('is_active', payload.isActive ? 1 : 0)
 
+        // Handle Images
         if (payload.images && payload.images.length > 0) {
-          payload.images.forEach(file => {
-            formData.append('images[]', file)
-          })
+          for (let i = 0; i < payload.images.length; i++) {
+            formData.append('images[]', payload.images[i])
+          }
         }
 
         await api.post('/products', formData, {
@@ -67,13 +72,23 @@ export const useProductStore = defineStore('product', {
       try {
         const formData = new FormData()
 
-        formData.append('category_id', payload.category_id)
+        // Same fixes for Update
+        formData.append('category_id', payload.categoryId)
         formData.append('name', payload.name)
         formData.append('description', payload.description || '')
         formData.append('price', payload.price)
         formData.append('stock', payload.stock)
-        formData.append('is_active', payload.is_active ? 1 : 0)
+        formData.append('is_active', payload.isActive ? 1 : 0) // Fix property name
+        
+        // METHOD PUT via POST for FormData
         formData.append('_method', 'PUT')
+
+        // Handle Images
+        if (payload.images && payload.images.length > 0) {
+          for (let i = 0; i < payload.images.length; i++) {
+            formData.append('images[]', payload.images[i])
+          }
+        }
 
         await api.post(`/products/${id}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },

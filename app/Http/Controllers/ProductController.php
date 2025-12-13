@@ -3,24 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
-use App\Models\ProductImage;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str; // <--- 1. IMPORTANT IMPORT
 
 class ProductController extends Controller
 {
     public function index(Request $request)
     {
+        // Load images relationship so Vue can see them
         $query = Product::with(['category', 'images']);
-
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
 
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => $query->where('is_active', true)->latest()->get()
+            ]);
         }
 
         return response()->json($query->latest()->paginate(10));
@@ -29,68 +30,68 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'images.*' => 'image|mimes:jpg,jpeg,png|max:2048'
+            'price' => 'required|numeric',
+            'stock' => 'required|integer',
+            'is_active' => 'boolean',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {
-            $productData = collect($validated)->except('images')->toArray();
-            $productData['slug'] = Str::slug($validated['name']) . '-' . uniqid();
+        // 2. CREATE PRODUCT (Auto-generate Slug here)
+        $product = Product::create([
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']) . '-' . Str::random(4), // Handle unique constraint safely
+            'category_id' => $validated['category_id'],
+            'description' => $validated['description'] ?? '',
+            'price' => $validated['price'],
+            'stock' => $validated['stock'],
+            'is_active' => $validated['is_active'] ?? true,
+        ]);
 
-            $product = Product::create($productData);
-
-            if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $index => $file) {
-                    $path = $file->store('products', 'public');
-                    ProductImage::create([
-                        'product_id' => $product->id,
-                        'image_path' => $path,
-                        'is_primary' => $index === 0
-                    ]);
-                }
+        // 3. UPLOAD IMAGES
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $path = $image->store('products', 'public');
+                $product->images()->create([
+                    'image_path' => $path,
+                    'is_primary' => false // Default
+                ]);
             }
+        }
 
-            return response()->json(['message' => 'Menu berhasil ditambahkan', 'data' => $product->load('images')]);
-        });
-    }
-
-    public function show($id)
-    {
-        return response()->json(Product::with(['category', 'images'])->findOrFail($id));
+        return response()->json(['success' => true, 'message' => 'Produk berhasil dibuat', 'data' => $product]);
     }
 
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'category_id' => 'exists:categories,id',
-            'name' => 'string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'numeric|min:0',
-            'stock' => 'integer|min:0',
-            'is_active' => 'boolean'
+            'name' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
+            'price' => 'required|numeric',
+            'stock' => 'required|integer',
+            'is_active' => 'boolean',
         ]);
 
-        if (isset($validated['name'])) {
-            $validated['slug'] = Str::slug($validated['name']) . '-' . $product->id;
-        }
+        // Update Slug if name changes
+        $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(4);
 
         $product->update($validated);
 
-        return response()->json(['message' => 'Menu diperbarui', 'data' => $product]);
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $path = $image->store('products', 'public');
+                $product->images()->create(['image_path' => $path]);
+            }
+        }
+
+        return response()->json(['success' => true, 'message' => 'Produk diperbarui']);
     }
 
     public function destroy(Product $product)
     {
-        // Delete physical images
-        foreach ($product->images as $img) {
-            Storage::disk('public')->delete($img->image_path);
-        }
-
         $product->delete();
-        return response()->json(['message' => 'Menu dihapus']);
+        return response()->json(['success' => true, 'message' => 'Produk dihapus']);
     }
 }
