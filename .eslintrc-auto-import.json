@@ -360,6 +360,7 @@
     "watchTriggerable": true,
     "watchWithFilter": true,
     "whenever": true,
-    "api": true
+    "api": true,
+    "getImageUrl": true
   }
 }

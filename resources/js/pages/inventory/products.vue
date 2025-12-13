@@ -1,6 +1,7 @@
 <script setup>
 import { useCategoryStore } from '@/stores/category'
 import { useProductStore } from '@/stores/product'
+import { getImageUrl } from '@/utils/helpers' // <--- IMPORT THE HELPER
 import { onMounted, reactive, ref } from 'vue'
 
 const productStore = useProductStore()
@@ -21,8 +22,8 @@ const defaultForm = {
   price: 0,
   stock: 0,
   isActive: true,
-  images: [], // For file upload
-  existingImages: [], // For preview
+  images: [], 
+  existingImages: [], 
 }
 
 const form = reactive({ ...defaultForm })
@@ -35,7 +36,6 @@ onMounted(async () => {
   ])
 })
 
-// Helper for Rupiah formatting
 const formatRupiah = value => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -171,7 +171,7 @@ const handleDelete = async () => {
                 >
                   <VImg 
                     v-if="item.images && item.images.length > 0" 
-                    :src="`/storage/${item.images[0].image_path}`" 
+                    :src="getImageUrl(item.images[0].image_path)" 
                     cover
                   />
                   <VIcon
@@ -273,7 +273,7 @@ const handleDelete = async () => {
                 md="4"
               >
                 <VSelect
-                  v-model="form.category_id"
+                  v-model="form.categoryId"
                   :items="categoryStore.categories"
                   item-title="name"
                   item-value="id"
@@ -338,7 +338,7 @@ const handleDelete = async () => {
                     class="border"
                   >
                     <VImg
-                      :src="`/storage/${img.image_path}`"
+                      :src="getImageUrl(img.image_path)"
                       cover
                     />
                   </VAvatar>
@@ -347,7 +347,7 @@ const handleDelete = async () => {
 
               <VCol cols="12">
                 <VSwitch
-                  v-model="form.is_active"
+                  v-model="form.isActive"
                   label="Status Aktif"
                   color="success"
                   hide-details
@@ -382,9 +382,7 @@ const handleDelete = async () => {
       max-width="400"
     >
       <VCard title="Hapus Menu?">
-        <VCardText>
-          Apakah Anda yakin ingin menghapus menu ini? Data tidak bisa dikembalikan.
-        </VCardText>
+        <VCardText>Apakah Anda yakin ingin menghapus menu ini? Data tidak bisa dikembalikan.</VCardText>
         <VCardActions>
           <VSpacer />
           <VBtn
