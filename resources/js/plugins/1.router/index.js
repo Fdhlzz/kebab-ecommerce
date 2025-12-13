@@ -9,29 +9,39 @@ const router = createRouter({
   ],
 })
 
-// Navigation Guard
+
 router.beforeEach((to, from, next) => {
-  const isLoggedIn = localStorage.getItem('accessToken')
+  const isLoggedIn = !!localStorage.getItem('accessToken')
   const userData = JSON.parse(localStorage.getItem('userData') || '{}')
   const userRole = userData.role
 
-  const publicPages = ['login', 'register', 'forgot-password'] 
-  const authRequired = !publicPages.includes(to.name)
+  const publicPages = ['/login', '/register', '/forgot-password', 'login', 'register']
+  const authRequired = !publicPages.includes(to.name) && !publicPages.includes(to.path)
 
   if (authRequired && !isLoggedIn) {
-    return next({ name: 'login' })
+    return next({ path: '/login' })
   }
 
   if (isLoggedIn) {
-    if (to.name === 'login') {
-      return next({ path: '/' })
-    }
-
+    
     if (userRole === 'customer') {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('userData')
       
-      return next({ name: 'login' })
+      return next({ path: '/login' })
+    }
+
+    if (to.path === '/login' || to.name === 'login') {
+      return userRole === 'kurir' 
+        ? next({ path: '/couriers/dashboard' }) 
+        : next({ path: '/' })
+    }
+
+    if (userRole === 'kurir' && !to.path.startsWith('/couriers')) {
+      return next({ path: '/couriers/dashboard' })
+    }
+    if (userRole === 'admin' && to.path.startsWith('/couriers/')) {
+      return next({ path: '/' })
     }
   }
 

@@ -8,7 +8,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShippingRateController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\CourierController;
-
+use App\Http\Controllers\CourierDeliveryController;
 Route::post('/auth/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
@@ -24,4 +24,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     ]);
     Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+});
+Route::middleware(['auth:sanctum', 'role:kurir'])->group(function () {
+    Route::get('/courier/assignments', [CourierDeliveryController::class, 'index']);
+    Route::post('/courier/orders/{order}/complete', [CourierDeliveryController::class, 'completeOrder']);
 });
