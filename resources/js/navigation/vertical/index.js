@@ -1,12 +1,21 @@
 export default [
   {
-    title: 'Home',
+    title: 'dashboard',
     to: { name: 'root' },
     icon: { icon: 'tabler-smart-home' },
   },
+  { heading: 'Manajemen Toko' },
   {
-    title: 'Second page',
-    to: { name: 'second-page' },
-    icon: { icon: 'tabler-file' },
+    title: 'Inventaris',
+    icon: { icon: 'tabler-box' },
+    children: [
+      { title: 'Kategori', to: { name: 'inventory-categories' } },
+      { title: 'Produk Menu', to: { name: 'inventory-products' } },
+    ],
+  },
+  {
+    title: 'Pengaturan Ongkir',
+    to: { name: 'shipping-rates' },
+    icon: { icon: 'tabler-truck' },
   },
 ]
