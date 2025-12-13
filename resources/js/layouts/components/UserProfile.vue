@@ -1,5 +1,11 @@
 <script setup>
-import avatar1 from '@images/avatars/avatar-1.png'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
+
+const logout = () => {
+  authStore.logout()
+}
 </script>
 
 <template>
@@ -8,17 +14,16 @@ import avatar1 from '@images/avatars/avatar-1.png'
     location="bottom right"
     offset-x="3"
     offset-y="3"
-    bordered
     color="success"
+    bordered
   >
     <VAvatar
       class="cursor-pointer"
       color="primary"
       variant="tonal"
     >
-      <VImg :src="avatar1" />
-
-      <!-- SECTION Menu -->
+      <span class="text-h6 font-weight-semibold">{{ authStore.userName.charAt(0).toUpperCase() }}</span>
+      
       <VMenu
         activator="parent"
         width="230"
@@ -26,7 +31,6 @@ import avatar1 from '@images/avatars/avatar-1.png'
         offset="14px"
       >
         <VList>
-          <!-- 👉 User Avatar & Name -->
           <VListItem>
             <template #prepend>
               <VListItemAction start>
@@ -41,21 +45,22 @@ import avatar1 from '@images/avatars/avatar-1.png'
                     color="primary"
                     variant="tonal"
                   >
-                    <VImg :src="avatar1" />
+                    <span>{{ authStore.userName.charAt(0).toUpperCase() }}</span>
                   </VAvatar>
                 </VBadge>
               </VListItemAction>
             </template>
 
             <VListItemTitle class="font-weight-semibold">
-              John Doe
+              {{ authStore.userName }}
             </VListItemTitle>
-            <VListItemSubtitle>Admin</VListItemSubtitle>
+            <VListItemSubtitle class="text-capitalize">
+              {{ authStore.userRole }}
+            </VListItemSubtitle>
           </VListItem>
 
           <VDivider class="my-2" />
 
-          <!-- 👉 Profile -->
           <VListItem link>
             <template #prepend>
               <VIcon
@@ -64,54 +69,10 @@ import avatar1 from '@images/avatars/avatar-1.png'
                 size="22"
               />
             </template>
-
-            <VListItemTitle>Profile</VListItemTitle>
+            <VListItemTitle>Profil Saya</VListItemTitle>
           </VListItem>
 
-          <!-- 👉 Settings -->
-          <VListItem link>
-            <template #prepend>
-              <VIcon
-                class="me-2"
-                icon="tabler-settings"
-                size="22"
-              />
-            </template>
-
-            <VListItemTitle>Settings</VListItemTitle>
-          </VListItem>
-
-          <!-- 👉 Pricing -->
-          <VListItem link>
-            <template #prepend>
-              <VIcon
-                class="me-2"
-                icon="tabler-currency-dollar"
-                size="22"
-              />
-            </template>
-
-            <VListItemTitle>Pricing</VListItemTitle>
-          </VListItem>
-
-          <!-- 👉 FAQ -->
-          <VListItem link>
-            <template #prepend>
-              <VIcon
-                class="me-2"
-                icon="tabler-help"
-                size="22"
-              />
-            </template>
-
-            <VListItemTitle>FAQ</VListItemTitle>
-          </VListItem>
-
-          <!-- Divider -->
-          <VDivider class="my-2" />
-
-          <!-- 👉 Logout -->
-          <VListItem to="/login">
+          <VListItem @click="logout">
             <template #prepend>
               <VIcon
                 class="me-2"
@@ -119,12 +80,10 @@ import avatar1 from '@images/avatars/avatar-1.png'
                 size="22"
               />
             </template>
-
-            <VListItemTitle>Logout</VListItemTitle>
+            <VListItemTitle>Keluar</VListItemTitle>
           </VListItem>
         </VList>
       </VMenu>
-      <!-- !SECTION -->
     </VAvatar>
   </VBadge>
 </template>
