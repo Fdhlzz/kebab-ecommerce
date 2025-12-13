@@ -6,6 +6,11 @@ export default [
   },
   { heading: 'Manajemen Toko' },
   {
+    title: 'Pesanan',
+    to: { name: 'orders' },
+    icon: { icon: 'tabler-shopping-cart' },
+  },
+  {
     title: 'Inventaris',
     icon: { icon: 'tabler-box' },
     children: [
@@ -18,4 +23,10 @@ export default [
     to: { name: 'shipping-rates' },
     icon: { icon: 'tabler-truck' },
   },
+  {
+    title: 'Manajemen Kurir',
+    to: { name: 'couriers' },
+    icon: { icon: 'tabler-users' },
+  },
+  
 ]

@@ -84,12 +84,6 @@ const handleSave = async () => {
     alert(result.message)
   }
 }
-
-const handleReset = async item => {
-  if (confirm(`Reset ongkir untuk Kecamatan ${item.name} ke default?`)) {
-    await shippingStore.resetRate(item.code)
-  }
-}
 </script>
 
 <template>
@@ -100,7 +94,7 @@ const handleReset = async item => {
           Pengaturan Ongkir
         </h2>
         <p class="text-subtitle-2 text-disabled">
-          Atur biaya pengiriman berdasarkan Kecamatan (District).
+          Atur biaya pengiriman berdasarkan Kecamatan (Hanya berlaku di Makassar).
         </p>
       </VCol>
     </VRow>
@@ -149,9 +143,6 @@ const handleReset = async item => {
                 <span class="font-weight-medium text-uppercase">
                   KEC. {{ item.name }}
                 </span>
-                <span class="text-caption text-disabled">
-                  {{ item.city_name }}
-                </span>
               </div>
             </td>
             <td>
@@ -173,21 +164,6 @@ const handleReset = async item => {
               >
                 <VIcon
                   icon="tabler-edit"
-                  size="22"
-                />
-              </VBtn>
-              
-              <VBtn 
-                v-if="item.price !== null"
-                icon 
-                variant="text" 
-                color="error" 
-                size="small" 
-                title="Reset ke Default"
-                @click="handleReset(item)"
-              >
-                <VIcon
-                  icon="tabler-rotate-clockwise"
                   size="22"
                 />
               </VBtn>
@@ -220,7 +196,7 @@ const handleReset = async item => {
       v-model="isDialogVisible"
       max-width="400"
     >
-      <VCard :title="`Atur Ongkir: ${form.region_name}`">
+      <VCard :title="`Atur Ongkir: ${form.regionName}`">
         <VCardText>
           <VForm @submit.prevent="handleSave">
             <VTextField
