@@ -10,7 +10,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\CourierController;
 use App\Http\Controllers\CourierDeliveryController;
 use App\Http\Controllers\RegionController;
-
+use App\Http\Controllers\UserAddressController;
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/register', [AuthController::class, 'register']);
 
@@ -24,6 +24,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/user/address', [AuthController::class, 'updateAddress']);
+    Route::get('/addresses', [UserAddressController::class, 'index']);
+    Route::post('/addresses', [UserAddressController::class, 'store']);
+    Route::put('/addresses/{id}', [UserAddressController::class, 'update']);
+    Route::delete('/addresses/{id}', [UserAddressController::class, 'destroy']);
+    Route::post('/addresses/{id}/primary', [UserAddressController::class, 'setPrimary']);
 });
 
 

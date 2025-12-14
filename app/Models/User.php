@@ -20,8 +20,6 @@ class User extends Authenticatable
         'phone',
         'avatar',
         'courier_status',
-        'address',
-        'district_id'
     ];
 
     protected $hidden = [
@@ -33,4 +31,8 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+    public function addresses()
+    {
+        return $this->hasMany(UserAddress::class);
+    }
 }
