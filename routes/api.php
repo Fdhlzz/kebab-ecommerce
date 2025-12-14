@@ -29,6 +29,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/addresses/{id}', [UserAddressController::class, 'update']);
     Route::delete('/addresses/{id}', [UserAddressController::class, 'destroy']);
     Route::post('/addresses/{id}/primary', [UserAddressController::class, 'setPrimary']);
+    Route::post('/orders', [OrderController::class, 'store']);
+    Route::get('/orders', [OrderController::class, 'index']);
 });
 
 
@@ -47,9 +49,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::apiResource('couriers', CourierController::class)->parameters([
         'couriers' => 'user'
     ]);
-
-    Route::get('/orders', [OrderController::class, 'index']);
-    Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+    Route::match(['put', 'post'], '/orders/{order}/status', [OrderController::class, 'updateStatus']);
 });
 
 Route::middleware(['auth:sanctum', 'role:kurir'])->group(function () {
