@@ -6,132 +6,187 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { VueRouterAutoImports, getPascalCaseRouteName } from 'unplugin-vue-router'
 import VueRouter from 'unplugin-vue-router/vite'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import MetaLayouts from 'vite-plugin-vue-meta-layouts'
 import vuetify from 'vite-plugin-vuetify'
 import svgLoader from 'vite-svg-loader'
 
-// ==========================================
-// 🔴 SET YOUR PC IP ADDRESS HERE 🔴
-// Run 'ipconfig' (Win) or 'ifconfig' (Mac) to find it.
-const host = '10.153.156.22' 
+export default defineConfig(({ mode }) => {
+  // 1. Load env variables
+  const env = loadEnv(mode, process.cwd(), '')
 
-// ==========================================
+  // 2. Extract Hostname (IP) from APP_URL
+  // Example: "http://10.153.156.22:8000" -> "10.153.156.22"
+  const appUrl = env.APP_URL || 'http://localhost:8000'
+  let host = 'localhost'
+  
+  try {
+    const urlObj = new URL(appUrl)
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [
-    // Docs: https://github.com/posva/unplugin-vue-router
-    // ℹ️ This plugin should be placed before vue plugin
-    VueRouter({
-      getRouteName: routeNode => {
-        // Convert pascal case to kebab case
-        return getPascalCaseRouteName(routeNode)
-          .replace(/([a-z\d])([A-Z])/g, '$1-$2')
-          .toLowerCase()
-      },
+    host = urlObj.hostname
+  } catch (e) {
+    console.warn('⚠️ Could not parse APP_URL, falling back to localhost')
+  }
 
-      routesFolder: 'resources/js/pages',
-    }),
-    vue({
-      template: {
-        compilerOptions: {
-          isCustomElement: tag => tag === 'swiper-container' || tag === 'swiper-slide',
+  // 3. Define Vite Port (Keep separate from Laravel's 8000)
+  const port = 5173 
+
+  return {
+    plugins: [
+      // -----------------------------
+      // Vue Router Auto Routes
+      // -----------------------------
+      VueRouter({
+        getRouteName: routeNode =>
+          getPascalCaseRouteName(routeNode)
+            .replace(/([a-z\d])([A-Z])/g, '$1-$2')
+            .toLowerCase(),
+        routesFolder: 'resources/js/pages',
+      }),
+
+      // -----------------------------
+      // Vue
+      // -----------------------------
+      vue({
+        template: {
+          compilerOptions: {
+            isCustomElement: tag =>
+              tag === 'swiper-container' || tag === 'swiper-slide',
+          },
+          transformAssetUrls: {
+            base: null,
+            includeAbsolute: false,
+          },
         },
+      }),
 
-        transformAssetUrls: {
-          base: null,
-          includeAbsolute: false,
+      // -----------------------------
+      // Laravel Vite Plugin
+      // -----------------------------
+      laravel({
+        input: ['resources/js/main.js'],
+        refresh: true,
+      }),
+
+      vueJsx(),
+
+      // -----------------------------
+      // Vuetify
+      // -----------------------------
+      vuetify({
+        styles: {
+          configFile: 'resources/styles/variables/_vuetify.scss',
         },
-      },
-    }),
-    laravel({
-      input: ['resources/js/main.js'],
-      refresh: true,
-    }),
-    vueJsx(),
+      }),
 
-    // Docs: https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin
-    vuetify({
-      styles: {
-        configFile: 'resources/styles/variables/_vuetify.scss',
-      },
-    }),
+      // -----------------------------
+      // Meta Layouts
+      // -----------------------------
+      MetaLayouts({
+        target: './resources/js/layouts',
+        defaultLayout: 'default',
+      }),
 
-    // Docs: https://github.com/dishait/vite-plugin-vue-meta-layouts?tab=readme-ov-file
-    MetaLayouts({
-      target: './resources/js/layouts',
-      defaultLayout: 'default',
-    }),
+      // -----------------------------
+      // Auto Components
+      // -----------------------------
+      Components({
+        dirs: [
+          'resources/js/@core/components',
+          'resources/js/views/demos',
+          'resources/js/components',
+        ],
+        dts: true,
+        resolvers: [
+          componentName => {
+            if (componentName === 'VueApexCharts')
+              return {
+                name: 'default',
+                from: 'vue3-apexcharts',
+                as: 'VueApexCharts',
+              }
+          },
+        ],
+      }),
 
-    // Docs: https://github.com/antfu/unplugin-vue-components#unplugin-vue-components
-    Components({
-      dirs: ['resources/js/@core/components', 'resources/js/views/demos', 'resources/js/components'],
-      dts: true,
-      resolvers: [
-        componentName => {
-          // Auto import `VueApexCharts`
-          if (componentName === 'VueApexCharts')
-            return { name: 'default', from: 'vue3-apexcharts', as: 'VueApexCharts' }
+      // -----------------------------
+      // Auto Imports
+      // -----------------------------
+      AutoImport({
+        imports: [
+          'vue',
+          VueRouterAutoImports,
+          '@vueuse/core',
+          '@vueuse/math',
+          'vue-i18n',
+          'pinia',
+        ],
+        dirs: [
+          './resources/js/@core/utils',
+          './resources/js/@core/composable/',
+          './resources/js/composables/',
+          './resources/js/utils/',
+          './resources/js/plugins/*/composables/*',
+        ],
+        vueTemplate: true,
+        ignore: ['useCookies', 'useStorage'],
+        eslintrc: {
+          enabled: true,
+          filepath: './.eslintrc-auto-import.json',
         },
-      ],
-    }),
+      }),
 
-    // Docs: https://github.com/antfu/unplugin-auto-import#unplugin-auto-import
-    AutoImport({
-      imports: ['vue', VueRouterAutoImports, '@vueuse/core', '@vueuse/math', 'vue-i18n', 'pinia'],
-      dirs: [
-        './resources/js/@core/utils',
-        './resources/js/@core/composable/',
-        './resources/js/composables/',
-        './resources/js/utils/',
-        './resources/js/plugins/*/composables/*',
-      ],
-      vueTemplate: true,
-
-      // ℹ️ Disabled to avoid confusion & accidental usage
-      ignore: ['useCookies', 'useStorage'],
-      eslintrc: {
-        enabled: true,
-        filepath: './.eslintrc-auto-import.json',
-      },
-    }),
-    svgLoader(),
-  ],
-  define: { 'process.env': {} },
-  resolve: {
-    alias: {
-      '@core-scss': fileURLToPath(new URL('./resources/styles/@core', import.meta.url)),
-      '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
-      '@themeConfig': fileURLToPath(new URL('./themeConfig.js', import.meta.url)),
-      '@core': fileURLToPath(new URL('./resources/js/@core', import.meta.url)),
-      '@layouts': fileURLToPath(new URL('./resources/js/@layouts', import.meta.url)),
-      '@images': fileURLToPath(new URL('./resources/images/', import.meta.url)),
-      '@styles': fileURLToPath(new URL('./resources/styles/', import.meta.url)),
-      '@configured-variables': fileURLToPath(new URL('./resources/styles/variables/_template.scss', import.meta.url)),
-      '@db': fileURLToPath(new URL('./resources/js/plugins/fake-api/handlers/', import.meta.url)),
-      '@api-utils': fileURLToPath(new URL('./resources/js/plugins/fake-api/utils/', import.meta.url)),
-    },
-  },
-  build: {
-    chunkSizeWarningLimit: 5000,
-  },
-  optimizeDeps: {
-    exclude: ['vuetify'],
-    entries: [
-      './resources/js/**/*.vue',
+      svgLoader(),
     ],
-  },
 
-  // 👇 THIS IS THE NEW SERVER BLOCK
-  server: {
-    host: '0.0.0.0', // Listen on all IPs (network)
-    hmr: {
-      host: host, // Force the browser to use your specific IP for updates
+    define: {
+      'process.env': {},
     },
-    cors: true,
-    watch: {
-      usePolling: true,
+
+    resolve: {
+      alias: {
+        '@core-scss': fileURLToPath(new URL('./resources/styles/@core', import.meta.url)),
+        '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
+        '@themeConfig': fileURLToPath(new URL('./themeConfig.js', import.meta.url)),
+        '@core': fileURLToPath(new URL('./resources/js/@core', import.meta.url)),
+        '@layouts': fileURLToPath(new URL('./resources/js/@layouts', import.meta.url)),
+        '@images': fileURLToPath(new URL('./resources/images/', import.meta.url)),
+        '@styles': fileURLToPath(new URL('./resources/styles/', import.meta.url)),
+        '@configured-variables': fileURLToPath(
+          new URL('./resources/styles/variables/_template.scss', import.meta.url),
+        ),
+        '@db': fileURLToPath(
+          new URL('./resources/js/plugins/fake-api/handlers/', import.meta.url),
+        ),
+        '@api-utils': fileURLToPath(
+          new URL('./resources/js/plugins/fake-api/utils/', import.meta.url),
+        ),
+      },
     },
-  },
+
+    build: {
+      chunkSizeWarningLimit: 5000,
+    },
+
+    optimizeDeps: {
+      exclude: ['vuetify'],
+      entries: ['./resources/js/**/*.vue'],
+    },
+
+    /**
+      * ✅ Network-safe dev server
+      * Automatically uses the IP from APP_URL for HMR
+      */
+    server: {
+      host: '0.0.0.0', // Listen on all interfaces
+      port: port,      // Run on 5173
+      hmr: {
+        host: host,    // Tell phone to look for assets at 10.x.x.x
+      },
+      cors: true,
+      watch: {
+        usePolling: true,
+      },
+    },
+  }
 })
