@@ -208,7 +208,7 @@ const triggerAssignCourier = () => {
               </div>
             </td>
             <td class="font-weight-bold">
-              {{ formatRupiah(order.total_price) }}
+              {{ formatRupiah(Number(order.total_price) + Number(order.shipping_cost)) }}
             </td>
             <td>
               <VChip
@@ -371,16 +371,21 @@ const triggerAssignCourier = () => {
                 <div style="min-inline-size: 250px;">
                   <div class="d-flex justify-space-between mb-2">
                     <span class="text-disabled">Subtotal</span>
-                    <span class="font-weight-medium">{{ formatRupiah(selectedOrder.total_price - selectedOrder.shipping_cost) }}</span>
+                    <span class="font-weight-medium">{{ formatRupiah(selectedOrder.total_price) }}</span>
                   </div>
+
                   <div class="d-flex justify-space-between mb-2">
                     <span class="text-disabled">Ongkos Kirim</span>
                     <span class="font-weight-medium">{{ formatRupiah(selectedOrder.shipping_cost) }}</span>
                   </div>
+
                   <VDivider class="my-2" />
+
                   <div class="d-flex justify-space-between align-center">
-                    <span class="text-h6 font-weight-bold">Total</span>
-                    <span class="text-h5 font-weight-bold text-primary">{{ formatRupiah(selectedOrder.total_price) }}</span>
+                    <span class="text-h6 font-weight-bold">Total Bayar</span>
+                    <span class="text-h5 font-weight-bold text-primary">
+                      {{ formatRupiah(Number(selectedOrder.total_price) + Number(selectedOrder.shipping_cost)) }}
+                    </span>
                   </div>
                 </div>
               </div>

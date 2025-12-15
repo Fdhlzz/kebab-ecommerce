@@ -34,10 +34,22 @@ onMounted(() => {
 
 const formatRupiah = val => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)
 
-const openMaps = address => {
-  const query = encodeURIComponent(address)
+const openGoogleMaps = rawAddress => {
+  if (!rawAddress) return
 
-  window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank')
+  // 1. Split by " (" to remove label (e.g. "(Rumah)")
+  let cleanAddress = rawAddress.split(' (')[0]
+
+  // 2. Safety check: If no label exists, try splitting by " - " to remove phone
+  if (cleanAddress === rawAddress && rawAddress.includes(' - ')) {
+    cleanAddress = rawAddress.split(' - ')[0]
+  }
+
+  // 3. Encode for URL (converts spaces to %20, etc.)
+  const encodedAddress = encodeURIComponent(cleanAddress)
+
+  // 4. Open Google Maps
+  window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank')
 }
 
 const initiateCompletion = orderId => {
@@ -171,7 +183,7 @@ const refresh = () => {
                     {{ order.customer_name }}
                   </div>
                   <div class="text-body-2 text-medium-emphasis">
-                    Tagihan: <span class="text-primary font-weight-bold">{{ formatRupiah(order.total_price) }}</span>
+                    Tagihan: <span class="text-primary font-weight-bold">{{ formatRupiah(Number(order.total_price) + Number(order.shipping_cost)) }}</span>
                   </div>
                 </div>
               </div>
@@ -195,7 +207,7 @@ const refresh = () => {
                     variant="outlined" 
                     color="info" 
                     prepend-icon="tabler-map-2" 
-                    @click="openMaps(order.shipping_address)"
+                    @click="openGoogleMaps(order.shipping_address)"
                   >
                     Buka Map
                   </VBtn>
