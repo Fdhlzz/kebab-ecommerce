@@ -79,22 +79,15 @@ class OrderController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric',
-            // 'shipping_cost' => 'required|numeric', // <-- Remove this validation, we calculate it ourselves
             'total_price' => 'required|numeric',
         ]);
 
         return DB::transaction(function () use ($request) {
             $user = $request->user();
 
-            // 1. Fetch Address
             $address = UserAddress::findOrFail($request->address_id);
-
-            // 2. ✅ FORCE BACKEND TO CALCULATE ONGKIR
-            // This uses the "getShippingCostAttribute" accessor we added to the UserAddress model earlier.
-            // It guarantees the price comes from your database, not the app's potentially buggy state.
             $fixedShippingCost = $address->shipping_cost ?? 0;
 
-            // 3. Create Order
             $order = Order::create([
                 'user_id' => $user->id,
                 'courier_id' => null,
@@ -102,14 +95,13 @@ class OrderController extends Controller
                 'shipping_address' => $address->full_address . ' (' . $address->label . ') - ' . $address->phone_number,
                 'region_code' => $address->district_id,
 
-                'total_price' => $request->total_price,     // Subtotal (e.g. 10,000)
-                'shipping_cost' => $fixedShippingCost,      // ✅ Securely calculated (e.g. 10,000)
+                'total_price' => $request->total_price,
+                'shipping_cost' => $fixedShippingCost,
 
                 'status' => 'pending',
                 'payment_status' => 'unpaid',
             ]);
 
-            // 4. Create Items
             foreach ($request->items as $item) {
                 OrderItem::create([
                     'order_id' => $order->id,
