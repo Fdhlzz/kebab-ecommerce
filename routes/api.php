@@ -11,6 +11,8 @@ use App\Http\Controllers\CourierController;
 use App\Http\Controllers\CourierDeliveryController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\UserAddressController;
+use App\Http\Controllers\SettingController;
+
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/register', [AuthController::class, 'register']);
 
@@ -34,6 +36,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders', [OrderController::class, 'index']);
     Route::match(['put', 'post'], '/orders/{order}/status', [OrderController::class, 'updateStatus']);
     Route::post('/orders/{order}/payment-proof', [OrderController::class, 'uploadPaymentProof']);
+    Route::get('/settings/qris', [SettingController::class, 'getQris']);
+    Route::post('/settings/qris', [SettingController::class, 'updateQris']);
 });
 
 

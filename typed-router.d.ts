@@ -28,6 +28,7 @@ declare module 'vue-router/auto-routes' {
     'login': RouteRecordInfo<'login', '/login', Record<never, never>, Record<never, never>>,
     'orders': RouteRecordInfo<'orders', '/orders', Record<never, never>, Record<never, never>>,
     'second-page': RouteRecordInfo<'second-page', '/second-page', Record<never, never>, Record<never, never>>,
+    'settings-qris': RouteRecordInfo<'settings-qris', '/settings/qris', Record<never, never>, Record<never, never>>,
     'shipping-rates': RouteRecordInfo<'shipping-rates', '/shipping-rates', Record<never, never>, Record<never, never>>,
   }
 }
