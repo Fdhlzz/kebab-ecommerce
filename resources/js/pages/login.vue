@@ -52,7 +52,7 @@ const handleLogin = async () => {
           </div>
         </template>
         <VCardTitle class="font-weight-bold text-h5 text-primary">
-          E-Commerce Admin
+          Kebab Mantap
         </VCardTitle>
       </VCardItem>
 
@@ -72,7 +72,7 @@ const handleLogin = async () => {
               <VTextField
                 v-model="form.email"
                 label="Email"
-                placeholder="admin@ecommerce.com"
+                placeholder="admin@kebabmantap.com"
                 type="email"
                 prepend-inner-icon="tabler-mail"
                 variant="outlined"

@@ -19,13 +19,25 @@ const formatDate = dateString => {
   return new Date(dateString).toLocaleDateString('id-ID', options)
 }
 
+// ✅ NEW: Robust Total Calculation Helper
+const calculateOrderTotal = order => {
+  const grandTotal = parseFloat(order.grand_total) || 0
+  const subTotal = parseFloat(order.total_price) || 0
+  const shipping = parseFloat(order.shipping_cost) || 0
+
+  // Use grand_total if available, otherwise fallback to sum
+  if (grandTotal > 0)
+    return grandTotal
+
+  return subTotal + shipping
+}
+
 // --- Computed Metrics (Client-Side Calculation) ---
-// Note: In a large app, these should come from a specific API endpoint like /api/dashboard-stats
 
 const totalRevenue = computed(() => {
   return orderStore.orders
     .filter(o => o.status === 'completed' && o.payment_status === 'paid')
-    .reduce((sum, order) => sum + Number(order.total_price) + Number(order.shipping_cost), 0)
+    .reduce((sum, order) => sum + calculateOrderTotal(order), 0) // ✅ Updated to use helper
 })
 
 const pendingCount = computed(() => orderStore.orders.filter(o => o.status === 'pending').length)
@@ -40,15 +52,15 @@ const recentOrders = computed(() => {
 // Calculate Top Products based on Order Items
 const topProducts = computed(() => {
   const productMap = {}
-  
+
   orderStore.orders.forEach(order => {
     // Only count active/completed orders
     if (order.status !== 'cancelled') {
       order.items.forEach(item => {
         if (!productMap[item.product.name]) {
-          productMap[item.product.name] = { 
-            name: item.product.name, 
-            sales: 0, 
+          productMap[item.product.name] = {
+            name: item.product.name,
+            sales: 0,
             revenue: 0,
             image: item.product.image, // Assuming product has image
           }
@@ -80,7 +92,7 @@ const getStatusColor = status => {
     completed: 'success',
     cancelled: 'error',
   }
-  
+
   return map[status] || 'grey'
 }
 </script>
@@ -96,10 +108,10 @@ const getStatusColor = status => {
           Halo Admin! Inilah ringkasan bisnis Kebab Anda hari ini.
         </p>
       </div>
-      <VBtn 
-        color="primary" 
-        variant="tonal" 
-        prepend-icon="tabler-refresh" 
+      <VBtn
+        color="primary"
+        variant="tonal"
+        prepend-icon="tabler-refresh"
         :loading="isLoading"
         @click="orderStore.fetchOrders({ status: 'all' })"
       >
@@ -264,7 +276,7 @@ const getStatusColor = status => {
               Lihat Semua
             </RouterLink>
           </template>
-          
+
           <VTable class="text-no-wrap">
             <thead>
               <tr>
@@ -301,7 +313,7 @@ const getStatusColor = status => {
                   </VChip>
                 </td>
                 <td class="text-end font-weight-medium">
-                  {{ formatRupiah(Number(order.total_price) + Number(order.shipping_cost)) }}
+                  {{ formatRupiah(calculateOrderTotal(order)) }}
                 </td>
               </tr>
               <tr v-if="recentOrders.length === 0">
@@ -366,7 +378,7 @@ const getStatusColor = status => {
                   </div>
                 </template>
               </VListItem>
-              
+
               <div
                 v-if="topProducts.length === 0"
                 class="text-center text-disabled py-4"

@@ -6,10 +6,10 @@ const orderStore = useOrderStore()
 
 // --- Configuration ---
 const companyInfo = reactive({
-  name: 'Kebab Turki Dashboard',
+  name: 'Kebab Mantap Dashboard',
   address: 'Jl. Hertasning No. 88, Makassar, Sulawesi Selatan',
   phone: '(0411) 456-7890',
-  email: 'finance@kebabturki.com',
+  email: 'finance@kebabmantap.com',
 })
 
 // --- State ---
@@ -58,9 +58,11 @@ const filteredOrders = computed(() => {
   }).sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
 })
 
+// ✅ UPDATED: Grand Total Calculation using your formula
 const reportSummary = computed(() => {
   const totalRev = filteredOrders.value.reduce((sum, order) => {
-    const amount = order.grand_total ? Number(order.grand_total) : (Number(order.total_price) + Number(order.shipping_cost))
+    // We strictly use your formula here: Total Price + Shipping
+    const amount = Number(order.total_price) + Number(order.shipping_cost)
     
     return sum + amount
   }, 0)
@@ -347,8 +349,7 @@ const handlePrint = () => {
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <path d="M12 3c1.918 0 3.52 1.35 3.91 3.151a4 4 0 0 1 2.09 7.723L18 15v4h-1v2H7v-2H6v-4l.009-1.126a4 4 0 0 1 2.091-7.723A4 4 0 0 1 12 3Z" />
-              <path d="M6.18 17h11.64" />
+              <path d="M12 5a3 3 0 0 1 3 3a3 3 0 0 1 -3 3a3 3 0 0 1 -3 -3a3 3 0 0 1 3 -3m0 -4a7 7 0 0 0 -7 7c0 1.3 .4 2.5 1.1 3.5l-3.1 8.5h4l1 -3h8l1 3h4l-3.1 -8.5c.7 -1 1.1 -2.2 1.1 -3.5a7 7 0 0 0 -7 -7" />
             </svg>
           </div>
           <div class="company-details">
