@@ -49,6 +49,11 @@ const adminMenu = [
     icon: { icon: 'tabler-clipboard-list' },
     badgeClass: 'bg-primary', 
   },
+  {
+    title: 'Laporan',
+    to: { name: 'laporan' }, // Ensure this matches the route name
+    icon: { icon: 'tabler-file-analytics' },
+  },
 ]
 
 // 3. Define Kurir Menu Items

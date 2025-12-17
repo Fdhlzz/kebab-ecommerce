@@ -16,8 +16,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // 👈 2. ADD THIS LOGIC
         // This checks if the incoming request host contains 'ngrok'
-        if (str_contains(request()->getHost(), 'ngrok-free.dev')) {
-            URL::forceScheme('https');
-        }
+        // if (str_contains(request()->getHost(), 'ngrok-free.dev')) {
+        //     URL::forceScheme('https');
+        // }
     }
 }

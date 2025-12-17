@@ -22,9 +22,12 @@ const showSnackbar = (text, type = 'success') => {
   snackbar.show = true
 }
 
+// --- 2. Confirmation Dialog ---
 const confirmDialog = reactive({ 
   show: false, 
-  orderId: null, 
+  orderId: null,
+  paymentMethod: '', // ✅ Added to track method
+  totalAmount: 0,    // ✅ Added to show amount
 })
 
 onMounted(() => {
@@ -36,24 +39,20 @@ const formatRupiah = val => new Intl.NumberFormat('id-ID', { style: 'currency', 
 
 const openGoogleMaps = rawAddress => {
   if (!rawAddress) return
-
-  // 1. Split by " (" to remove label (e.g. "(Rumah)")
   let cleanAddress = rawAddress.split(' (')[0]
-
-  // 2. Safety check: If no label exists, try splitting by " - " to remove phone
   if (cleanAddress === rawAddress && rawAddress.includes(' - ')) {
     cleanAddress = rawAddress.split(' - ')[0]
   }
-
-  // 3. Encode for URL (converts spaces to %20, etc.)
   const encodedAddress = encodeURIComponent(cleanAddress)
 
-  // 4. Open Google Maps
   window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank')
 }
 
-const initiateCompletion = orderId => {
-  confirmDialog.orderId = orderId
+// ✅ Updated to capture order details for the dialog
+const initiateCompletion = order => {
+  confirmDialog.orderId = order.id
+  confirmDialog.paymentMethod = order.payment_method
+  confirmDialog.totalAmount = Number(order.total_price) + Number(order.shipping_cost)
   confirmDialog.show = true
 }
 
@@ -62,6 +61,7 @@ const handleComplete = async () => {
 
   isSubmitLoading.value = true
 
+  // Ensure your store calls the update status endpoint with 'completed'
   const result = await store.completeOrder(confirmDialog.orderId)
 
   isSubmitLoading.value = false
@@ -69,6 +69,10 @@ const handleComplete = async () => {
 
   if (result.success) {
     showSnackbar('Pengantaran Selesai! Kerja bagus.')
+
+    // Refresh lists
+    store.fetchOrders('active')
+    store.fetchOrders('history')
   } else {
     showSnackbar(result.message, 'error')
   }
@@ -164,9 +168,14 @@ const refresh = () => {
             border
             class="rounded-lg"
           >
-            <div class="bg-primary text-white px-4 py-2 d-flex justify-space-between align-center">
+            <div
+              class="px-4 py-2 d-flex justify-space-between align-center" 
+              :class="order.payment_method === 'COD' ? 'bg-warning text-white' : 'bg-primary text-white'"
+            >
               <span class="font-weight-bold">Order #{{ order.id }}</span>
-              <span class="text-caption font-weight-bold text-uppercase">Sedang Diantar</span>
+              <span class="text-caption font-weight-bold text-uppercase">
+                {{ order.payment_method === 'COD' ? 'TAGIH TUNAI (COD)' : 'SUDAH LUNAS (QRIS)' }}
+              </span>
             </div>
 
             <VCardText class="pt-4">
@@ -182,8 +191,14 @@ const refresh = () => {
                   <div class="font-weight-bold text-subtitle-1">
                     {{ order.customer_name }}
                   </div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    Tagihan: <span class="text-primary font-weight-bold">{{ formatRupiah(Number(order.total_price) + Number(order.shipping_cost)) }}</span>
+                  <div class="text-body-2 mt-1">
+                    Tagihan: 
+                    <span
+                      class="font-weight-bold"
+                      :class="order.payment_method === 'COD' ? 'text-warning' : 'text-success'"
+                    >
+                      {{ formatRupiah(Number(order.total_price) + Number(order.shipping_cost)) }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -217,7 +232,7 @@ const refresh = () => {
                     block 
                     color="success" 
                     prepend-icon="tabler-check" 
-                    @click="initiateCompletion(order.id)"
+                    @click="initiateCompletion(order)"
                   >
                     Selesai
                   </VBtn>
@@ -275,46 +290,62 @@ const refresh = () => {
 
     <VDialog
       v-model="confirmDialog.show"
-      max-width="340"
+      max-width="360"
       persistent
     >
       <VCard class="text-center pa-4">
         <VCardText class="d-flex flex-column align-center">
-          <VAvatar
-            color="success"
+          <VAvatar 
+            :color="confirmDialog.paymentMethod === 'COD' ? 'warning' : 'success'" 
             variant="tonal"
             size="64"
             class="mb-4"
           >
             <VIcon
-              icon="tabler-circle-check"
+              :icon="confirmDialog.paymentMethod === 'COD' ? 'tabler-cash' : 'tabler-circle-check'"
               size="32"
             />
           </VAvatar>
+
           <h3 class="text-h6 font-weight-bold mb-2">
-            Selesaikan Pengantaran?
+            {{ confirmDialog.paymentMethod === 'COD' ? 'Terima Uang Tunai?' : 'Selesaikan Pesanan?' }}
           </h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">
-            Pastikan barang sudah diterima pelanggan.
-          </p>
+
+          <div v-if="confirmDialog.paymentMethod === 'COD'">
+            <p class="text-body-2 mb-1">
+              Pelanggan harus membayar:
+            </p>
+            <h2 class="text-h4 font-weight-bold text-warning mb-2">
+              {{ formatRupiah(confirmDialog.totalAmount) }}
+            </h2>
+            <p class="text-caption text-disabled">
+              Pastikan uang diterima sebelum klik Ya.
+            </p>
+          </div>
+
+          <div v-else>
+            <p class="text-body-2 text-medium-emphasis mb-0">
+              Pesanan ini sudah <b>LUNAS (QRIS)</b>.<br>Pastikan barang diterima pelanggan.
+            </p>
+          </div>
         </VCardText>
         <VCardActions class="justify-center gap-3 pt-2">
-          <VBtn 
-            variant="outlined" 
-            color="secondary" 
+          <VBtn
+            variant="outlined"
+            color="secondary"
             class="px-6"
             @click="confirmDialog.show = false"
           >
             Batal
           </VBtn>
-          <VBtn 
-            color="success" 
-            variant="flat" 
-            :loading="isSubmitLoading" 
+          <VBtn
+            color="success"
+            variant="flat"
+            :loading="isSubmitLoading"
             class="px-6"
             @click="handleComplete"
           >
-            Ya, Selesai
+            {{ confirmDialog.paymentMethod === 'COD' ? 'Uang Diterima' : 'Selesai' }}
           </VBtn>
         </VCardActions>
       </VCard>

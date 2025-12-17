@@ -1,4 +1,3 @@
-<!-- eslint-disable camelcase -->
 <script setup>
 import { useCourierStore } from '@/stores/courier'
 import { useOrderStore } from '@/stores/order'
@@ -6,6 +5,8 @@ import { onMounted, reactive, ref } from 'vue'
 
 const orderStore = useOrderStore()
 const courierStore = useCourierStore()
+
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL
 
 // UI States
 const activeTab = ref('all')
@@ -16,13 +17,8 @@ const isSubmitLoading = ref(false)
 const selectedOrder = ref(null)
 const selectedCourierId = ref(null)
 
-// --- 1. Notification System (Snackbar) ---
-const snackbar = reactive({
-  show: false,
-  text: '',
-  color: 'success',
-  icon: 'tabler-circle-check',
-})
+// --- Notification & Confirm Dialog (Kept same logic, just refined UI) ---
+const snackbar = reactive({ show: false, text: '', color: 'success', icon: 'tabler-circle-check' })
 
 const showSnackbar = (text, type = 'success') => {
   snackbar.text = text
@@ -31,15 +27,7 @@ const showSnackbar = (text, type = 'success') => {
   snackbar.show = true
 }
 
-// --- 2. Custom Confirmation Dialog System ---
-const confirmDialog = reactive({
-  show: false,
-  title: '',
-  message: '',
-  color: 'primary',
-  icon: 'tabler-help',
-  onConfirm: null,
-})
+const confirmDialog = reactive({ show: false, title: '', message: '', color: 'primary', icon: 'tabler-help', onConfirm: null })
 
 const openConfirm = (title, message, color, icon, callback) => {
   confirmDialog.title = title
@@ -59,14 +47,13 @@ const handleConfirmAction = async () => {
   }
 }
 
-// --- Configuration & Helpers ---
-onMounted(() => {
-  orderStore.fetchOrders()
-})
+onMounted(() => { orderStore.fetchOrders() })
 
+// --- Configuration ---
 const statusConfig = {
   pending: { color: 'warning', label: 'Menunggu Konfirmasi', icon: 'tabler-clock', bg: 'bg-warning' },
   processing: { color: 'info', label: 'Sedang Dibuat', icon: 'tabler-chef-hat', bg: 'bg-info' },
+  // eslint-disable-next-line camelcase
   on_delivery: { color: 'primary', label: 'Sedang Diantar', icon: 'tabler-truck-delivery', bg: 'bg-primary' },
   completed: { color: 'success', label: 'Selesai', icon: 'tabler-circle-check', bg: 'bg-success' },
   cancelled: { color: 'error', label: 'Dibatalkan', icon: 'tabler-x', bg: 'bg-error' },
@@ -93,6 +80,18 @@ const formatDate = dateString => {
   return new Date(dateString).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+const getImageUrl = path => {
+  if (!path) return null
+  if (path.startsWith('http')) return path
+  
+  return `${STORAGE_URL}${path}`
+}
+
+const openImageInNewTab = path => {
+  const url = getImageUrl(path)
+  if (url) window.open(url, '_blank')
+}
+
 const handleFilter = status => {
   activeTab.value = status
   orderStore.fetchOrders({ status: status === 'all' ? null : status })
@@ -108,52 +107,33 @@ const openDetail = order => {
 }
 
 // --- Actions ---
-
-// Process Order (Pending -> Processing)
-const triggerProcessOrder = () => {
-  openConfirm(
-    'Mulai Produksi?',
-    'Status pesanan akan berubah menjadi "Sedang Dibuat". Pastikan bahan tersedia.',
-    'info',
-    'tabler-chef-hat',
-    async () => {
-      const result = await orderStore.updateStatus(selectedOrder.value.id, 'processing')
-      if (result.success) {
-        showSnackbar('Pesanan diproses ke dapur.')
-        isDetailDialogVisible.value = false
-      } else {
-        showSnackbar(result.message, 'error')
-      }
-    },
-  )
+const triggerVerifyPayment = () => {
+  openConfirm('Verifikasi Pembayaran?', 'Pastikan dana masuk. Status akan berubah menjadi "Sedang Dibuat".', 'success', 'tabler-cash', async () => {
+    const result = await orderStore.updateStatus(selectedOrder.value.id, 'processing')
+    if (result.success) { showSnackbar('Pembayaran diverifikasi.'); isDetailDialogVisible.value = false; orderStore.fetchOrders() }
+    else { showSnackbar(result.message, 'error') }
+  })
 }
 
-// Assign Courier (Processing -> On Delivery)
-const triggerAssignCourier = () => {
-  if (!selectedCourierId.value) {
-    showSnackbar('Harap pilih kurir terlebih dahulu.', 'error')
-    
-    return
-  }
+const triggerProcessOrder = () => {
+  openConfirm('Mulai Produksi?', 'Status berubah menjadi "Sedang Dibuat".', 'info', 'tabler-chef-hat', async () => {
+    const result = await orderStore.updateStatus(selectedOrder.value.id, 'processing')
+    if (result.success) { showSnackbar('Pesanan diproses.'); isDetailDialogVisible.value = false }
+    else { showSnackbar(result.message, 'error') }
+  })
+}
 
+const triggerAssignCourier = () => {
+  if (!selectedCourierId.value) { showSnackbar('Pilih kurir dulu.', 'error') 
+
+    return }
   const courierName = courierStore.couriers.find(c => c.id === selectedCourierId.value)?.name || 'Kurir'
 
-  // FIX: Removed markdown bolding (**) to satisfy ESLint vue/no-v-html rule
-  openConfirm(
-    'Kirim Pesanan?',
-    `Pesanan akan diserahkan kepada ${courierName}. Status berubah menjadi "Sedang Diantar".`,
-    'primary',
-    'tabler-truck-delivery',
-    async () => {
-      const result = await orderStore.updateStatus(selectedOrder.value.id, 'on_delivery', selectedCourierId.value)
-      if (result.success) {
-        showSnackbar('Pesanan berhasil diserahkan ke kurir.')
-        isDetailDialogVisible.value = false
-      } else {
-        showSnackbar(result.message, 'error')
-      }
-    },
-  )
+  openConfirm('Kirim Pesanan?', `Serahkan ke ${courierName}.`, 'primary', 'tabler-truck-delivery', async () => {
+    const result = await orderStore.updateStatus(selectedOrder.value.id, 'on_delivery', selectedCourierId.value)
+    if (result.success) { showSnackbar('Berhasil diserahkan.'); isDetailDialogVisible.value = false }
+    else { showSnackbar(result.message, 'error') }
+  })
 }
 </script>
 
@@ -184,10 +164,11 @@ const triggerAssignCourier = () => {
             <th>ID</th>
             <th>Waktu</th>
             <th>Pelanggan</th>
+            <th>Pembayaran</th>
             <th>Total</th>
             <th>Status</th>
             <th class="text-center">
-              Detail
+              Aksi
             </th>
           </tr>
         </thead>
@@ -196,18 +177,36 @@ const triggerAssignCourier = () => {
             v-for="order in orderStore.orders"
             :key="order.id"
           >
-            <td class="text-disabled">
+            <td class="text-disabled font-weight-medium">
               #{{ order.id }}
             </td>
-            <td class="text-caption">
+            <td class="text-caption text-medium-emphasis">
               {{ formatDate(order.created_at) }}
             </td>
+            <td><span class="font-weight-medium">{{ order.customer_name }}</span></td>
+            
             <td>
-              <div class="d-flex flex-column">
-                <span class="font-weight-medium">{{ order.customer_name }}</span>
+              <div class="d-flex align-center gap-2">
+                <VChip
+                  size="small"
+                  :color="order.payment_method === 'QRIS' || 'COD' ? 'purple' : 'grey'"
+                  variant="flat"
+                  class="font-weight-bold"
+                >
+                  {{ order.payment_method }}
+                </VChip>
+                <VChip
+                  size="small"
+                  :color="order.payment_status === 'paid' ? 'success' : 'error'"
+                  variant="tonal"
+                  class="font-weight-bold"
+                >
+                  {{ order.payment_status === 'paid' ? 'LUNAS' : 'BELUM LUNAS' }}
+                </VChip>
               </div>
             </td>
-            <td class="font-weight-bold">
+
+            <td class="font-weight-bold text-high-emphasis">
               {{ formatRupiah(Number(order.total_price) + Number(order.shipping_cost)) }}
             </td>
             <td>
@@ -232,15 +231,19 @@ const triggerAssignCourier = () => {
           </tr>
           <tr v-if="orderStore.orders.length === 0">
             <td
-              colspan="6"
-              class="text-center pa-4 text-disabled"
+              colspan="7"
+              class="text-center pa-8 text-disabled"
             >
-              Tidak ada data pesanan.
+              <VIcon
+                icon="tabler-box-off"
+                size="40"
+                class="mb-2"
+              />
+              <div>Tidak ada data pesanan</div>
             </td>
           </tr>
         </tbody>
       </VTable>
-
       <VCardText class="d-flex justify-end pt-2">
         <VPagination
           v-model="orderStore.pagination.current_page"
@@ -270,7 +273,7 @@ const triggerAssignCourier = () => {
               <VIcon :icon="statusConfig[selectedOrder.status].icon" />
               {{ statusConfig[selectedOrder.status].label }}
             </h3>
-            <div class="mt-2 opacity-90">
+            <div class="mt-2 opacity-90 d-flex align-center">
               <VIcon
                 icon="tabler-calendar"
                 size="16"
@@ -305,7 +308,7 @@ const triggerAssignCourier = () => {
               truncate-line="start"
             >
               <VTimelineItem 
-                v-for="(step, index) in timelineSteps" 
+                v-for="(step, index) in timelineSteps"
                 :key="step.status"
                 :dot-color="getCurrentStepIndex(selectedOrder.status) >= index ? 'primary' : 'grey-lighten-2'"
                 :icon="getCurrentStepIndex(selectedOrder.status) >= index ? 'tabler-check' : ''"
@@ -324,8 +327,11 @@ const triggerAssignCourier = () => {
               md="8"
               class="pa-6 border-e"
             >
-              <h4 class="text-h6 font-weight-bold mb-4">
-                Rincian Menu
+              <h4 class="text-h6 font-weight-bold mb-4 d-flex align-center gap-2">
+                <VIcon
+                  icon="tabler-receipt"
+                  size="20"
+                /> Rincian Menu
               </h4>
               <VTable
                 density="compact"
@@ -333,14 +339,11 @@ const triggerAssignCourier = () => {
               >
                 <thead class="bg-grey-lighten-4">
                   <tr>
-                    <th>Menu</th>
-                    <th class="text-center">
+                    <th>Menu</th><th class="text-center">
                       Qty
-                    </th>
-                    <th class="text-end">
+                    </th><th class="text-end">
                       Harga
-                    </th>
-                    <th class="text-end">
+                    </th><th class="text-end">
                       Total
                     </th>
                   </tr>
@@ -370,22 +373,15 @@ const triggerAssignCourier = () => {
               <div class="d-flex justify-end">
                 <div style="min-inline-size: 250px;">
                   <div class="d-flex justify-space-between mb-2">
-                    <span class="text-disabled">Subtotal</span>
-                    <span class="font-weight-medium">{{ formatRupiah(selectedOrder.total_price) }}</span>
+                    <span class="text-disabled">Subtotal</span><span class="font-weight-medium">{{ formatRupiah(selectedOrder.total_price) }}</span>
                   </div>
-
                   <div class="d-flex justify-space-between mb-2">
-                    <span class="text-disabled">Ongkos Kirim</span>
-                    <span class="font-weight-medium">{{ formatRupiah(selectedOrder.shipping_cost) }}</span>
+                    <span class="text-disabled">Ongkos Kirim</span><span class="font-weight-medium">{{ formatRupiah(selectedOrder.shipping_cost) }}</span>
                   </div>
-
                   <VDivider class="my-2" />
-
                   <div class="d-flex justify-space-between align-center">
                     <span class="text-h6 font-weight-bold">Total Bayar</span>
-                    <span class="text-h5 font-weight-bold text-primary">
-                      {{ formatRupiah(Number(selectedOrder.total_price) + Number(selectedOrder.shipping_cost)) }}
-                    </span>
+                    <span class="text-h5 font-weight-bold text-primary">{{ formatRupiah(Number(selectedOrder.total_price) + Number(selectedOrder.shipping_cost)) }}</span>
                   </div>
                 </div>
               </div>
@@ -428,15 +424,103 @@ const triggerAssignCourier = () => {
                 </VCardText>
               </VCard>
 
+              <VCard
+                v-if="selectedOrder.payment_method === 'QRIS'"
+                flat
+                border
+                class="mb-4"
+              >
+                <VCardItem class="bg-purple-lighten-5">
+                  <template #prepend>
+                    <VIcon
+                      icon="tabler-qrcode"
+                      color="purple"
+                    />
+                  </template>
+                  <VCardTitle class="text-subtitle-2 text-purple font-weight-bold">
+                    Pembayaran QRIS
+                  </VCardTitle>
+                  <template #append>
+                    <VChip
+                      size="x-small"
+                      :color="selectedOrder.payment_status === 'paid' ? 'success' : 'error'"
+                    >
+                      {{ selectedOrder.payment_status === 'paid' ? 'LUNAS' : 'UNPAID' }}
+                    </VChip>
+                  </template>
+                </VCardItem>
+                <VDivider />
+                <VCardText class="text-center py-4">
+                  <div v-if="selectedOrder.payment_proof">
+                    <VImg
+                      :src="getImageUrl(selectedOrder.payment_proof)"
+                      max-height="200"
+                      class="rounded border cursor-pointer mb-2 elevation-2"
+                      cover
+                      @click="openImageInNewTab(selectedOrder.payment_proof)"
+                    />
+                    <div
+                      class="text-caption text-primary cursor-pointer d-flex align-center justify-center gap-1"
+                      @click="openImageInNewTab(selectedOrder.payment_proof)"
+                    >
+                      <VIcon
+                        icon="tabler-zoom-in"
+                        size="14"
+                      /> Klik untuk memperbesar
+                    </div>
+                  </div>
+                  <div
+                    v-else
+                    class="text-disabled py-4"
+                  >
+                    <VIcon
+                      icon="tabler-photo-off"
+                      size="30"
+                      class="mb-2"
+                    />
+                    <div>Belum ada bukti upload</div>
+                  </div>
+                </VCardText>
+              </VCard>
+
               <div class="mt-6">
                 <h5 class="text-subtitle-2 text-disabled mb-3 text-uppercase">
                   Tindakan
                 </h5>
 
-                <div v-if="selectedOrder.status === 'pending'">
-                  <p class="text-caption mb-3">
-                    Pesanan baru. Cek pembayaran dan stok.
-                  </p>
+                <div v-if="selectedOrder.status === 'pending' && selectedOrder.payment_method === 'QRIS' && selectedOrder.payment_status === 'unpaid'">
+                  <VAlert
+                    type="warning"
+                    variant="tonal"
+                    class="mb-3 text-caption"
+                    density="compact"
+                  >
+                    Cek bukti transfer sebelum memproses.
+                  </VAlert>
+                  <VBtn
+                    block
+                    color="success"
+                    size="large"
+                    :disabled="!selectedOrder.payment_proof"
+                    :loading="isSubmitLoading"
+                    @click="triggerVerifyPayment"
+                  >
+                    <VIcon
+                      start
+                      icon="tabler-circle-check"
+                    /> Verifikasi Pembayaran
+                  </VBtn>
+                </div>
+
+                <div v-else-if="selectedOrder.status === 'pending'">
+                  <VAlert
+                    type="info"
+                    variant="tonal"
+                    class="mb-3 text-caption"
+                    density="compact"
+                  >
+                    Pesanan baru (COD/Lunas). Cek stok dapur.
+                  </VAlert>
                   <VBtn
                     block
                     color="info"
@@ -452,9 +536,6 @@ const triggerAssignCourier = () => {
                 </div>
 
                 <div v-else-if="selectedOrder.status === 'processing'">
-                  <p class="text-caption mb-2">
-                    Pilih kurir untuk mengantar pesanan ini.
-                  </p>
                   <VSelect
                     v-model="selectedCourierId"
                     :items="courierStore.couriers.filter(c => c.courier_status === 'available')"
@@ -463,8 +544,8 @@ const triggerAssignCourier = () => {
                     label="Pilih Kurir"
                     variant="outlined"
                     bg-color="white"
-                    class="mb-3"
                     density="compact"
+                    class="mb-3"
                   >
                     <template #item="{ props, item }">
                       <VListItem
@@ -508,7 +589,7 @@ const triggerAssignCourier = () => {
                     </div>
                   </VCard>
                 </div>
-
+                
                 <div v-else-if="selectedOrder.status === 'completed'">
                   <VAlert
                     type="success"
@@ -560,10 +641,10 @@ const triggerAssignCourier = () => {
           >
             Batal
           </VBtn>
-          <VBtn 
-            :color="confirmDialog.color" 
-            variant="flat" 
-            :loading="isSubmitLoading" 
+          <VBtn
+            :color="confirmDialog.color"
+            variant="flat"
+            :loading="isSubmitLoading"
             class="px-6"
             @click="handleConfirmAction"
           >
@@ -581,8 +662,7 @@ const triggerAssignCourier = () => {
       transition="slide-x-reverse-transition"
     >
       <div class="d-flex align-center gap-2">
-        <VIcon :icon="snackbar.icon" />
-        <span class="font-weight-medium">{{ snackbar.text }}</span>
+        <VIcon :icon="snackbar.icon" /><span class="font-weight-medium">{{ snackbar.text }}</span>
       </div>
     </VSnackbar>
   </div>

@@ -14,8 +14,11 @@ class Order extends Model
         'region_code',
         'total_price',
         'shipping_cost',
+        'grand_total',
         'status',
-        'payment_status'
+        'payment_status',
+        'payment_method',
+        'payment_proof',
     ];
 
     public function items()

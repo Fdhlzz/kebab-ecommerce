@@ -20,6 +20,7 @@ Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}', [CategoryController::class, 'show']);
 
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -31,6 +32,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/addresses/{id}/primary', [UserAddressController::class, 'setPrimary']);
     Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/orders', [OrderController::class, 'index']);
+    Route::match(['put', 'post'], '/orders/{order}/status', [OrderController::class, 'updateStatus']);
+    Route::post('/orders/{order}/payment-proof', [OrderController::class, 'uploadPaymentProof']);
 });
 
 
@@ -49,7 +52,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::apiResource('couriers', CourierController::class)->parameters([
         'couriers' => 'user'
     ]);
-    Route::match(['put', 'post'], '/orders/{order}/status', [OrderController::class, 'updateStatus']);
+
 });
 
 Route::middleware(['auth:sanctum', 'role:kurir'])->group(function () {
